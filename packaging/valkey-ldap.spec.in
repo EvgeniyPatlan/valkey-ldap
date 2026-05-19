@@ -25,7 +25,14 @@ BuildRequires:  openldap-devel
 BuildRequires:  clang-devel
 BuildRequires:  wget
 
-Recommends:     valkey >= 7.2
+# Recommend Percona Valkey first, falling back to upstream valkey-server or
+# the legacy 'valkey' package. Uses RPM boolean dependencies (rpm >= 4.13;
+# RHEL 8+, Fedora, SUSE 15+).
+Recommends:     (percona-valkey-server >= 7.2 or valkey-server >= 7.2 or valkey >= 7.2)
+
+# Percona-branded drop-in replacement for the upstream valkey-ldap package.
+Provides:       valkey-ldap = %{version}-%{release}
+Obsoletes:      valkey-ldap < %{version}-%{release}
 
 %global _description %{expand:
 An LDAP authentication module for Valkey.}

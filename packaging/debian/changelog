@@ -1,0 +1,8 @@
+percona-valkey-ldap (1.0.0-1) unstable; urgency=medium
+
+  * Initial Percona-branded packaging of valkey-ldap based on upstream 1.0.0.
+  * Source and binary package renamed to percona-valkey-ldap.
+  * Recommends percona-valkey-server, falling back to valkey-server / valkey.
+  * Provides/Conflicts/Replaces upstream valkey-ldap (drop-in replacement).
+
+ -- Evgeniy Patlan <evgeniy.patlan@percona.com>  Wed, 20 May 2026 00:00:00 +0000
