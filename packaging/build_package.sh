@@ -538,7 +538,7 @@ build_source_deb() {
     {
         echo "${PACKAGE_NAME} (${VERSION}-${RELEASE}) unstable; urgency=low"
         echo "  * Initial Release."
-        echo " -- Evgeniy Patlan <evgeniy.patlan@percona.com> $(date -R)"
+        echo " -- Evgeniy Patlan <evgeniy.patlan@percona.com>  $(date -R)"
     } > changelog
     cd ..
 
