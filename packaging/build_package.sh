@@ -242,14 +242,14 @@ install_deps_rpm() {
                 local epel_pkg="oracle-epel-release-el${RHEL}"
                 if ! rpm -q "$epel_pkg" &>/dev/null; then
                     log_info "Installing EPEL for Oracle Linux: $epel_pkg"
-                    $pkg_mgr install -y "$epel_pkg" \
+                    $pkg_mgr install -y --setopt=retries=10 "$epel_pkg" \
                         || log_warn "EPEL installation failed (non-critical)"
                 fi
                 ;;
             rhel)
                 if ! rpm -q epel-release &>/dev/null; then
                     log_info "Installing EPEL repository..."
-                    $pkg_mgr install -y epel-release \
+                    $pkg_mgr install -y --setopt=retries=10 epel-release \
                         || log_warn "EPEL installation failed (non-critical)"
                 fi
                 ;;
@@ -264,7 +264,7 @@ install_deps_rpm() {
         # to install curl alongside it without --allowerasing. The preinstalled
         # curl-minimal is sufficient for install_rust_toolchain's rustup-init
         # download. The upstream spec.in carries the same comment.
-        $pkg_mgr install -y \
+        $pkg_mgr install -y --setopt=retries=10 \
             rpm-build rpmdevtools gcc gcc-c++ make git tar gzip wget ca-certificates \
             openssl openssl-devel openldap-devel clang-devel pkg-config
 
@@ -274,16 +274,20 @@ install_deps_rpm() {
 
 install_deps_deb() {
     log_info "Installing DEB build dependencies..."
-    apt-get update
+    # Acquire::Retries makes apt retry transient mirror failures (e.g. mid-
+    # download "Connection reset by peer") without aborting the whole stage.
+    # Fix-Missing tolerates a partial fetch and re-runs against any leftover.
+    local APT_OPTS=(-o Acquire::Retries=5)
+    apt-get "${APT_OPTS[@]}" update
 
-    DEBIAN_FRONTEND=noninteractive apt-get -y install \
+    DEBIAN_FRONTEND=noninteractive apt-get "${APT_OPTS[@]}" -y --fix-missing install \
         build-essential debhelper devscripts dpkg-dev \
         fakeroot ca-certificates lsb-release \
         git wget curl tar gzip make gcc pkg-config \
         libssl-dev libclang-dev
 
-    DEBIAN_FRONTEND=noninteractive apt-get -y install libldap-dev \
-        || DEBIAN_FRONTEND=noninteractive apt-get -y install libldap2-dev
+    DEBIAN_FRONTEND=noninteractive apt-get "${APT_OPTS[@]}" -y --fix-missing install libldap-dev \
+        || DEBIAN_FRONTEND=noninteractive apt-get "${APT_OPTS[@]}" -y --fix-missing install libldap2-dev
 }
 
 # Install rustup + the pinned toolchain into /usr/local so subsequent stages
