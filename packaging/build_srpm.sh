@@ -6,7 +6,7 @@ done
 
 VERSION=`grep "version = .*" Cargo.toml | sed 's/.* = "\(.*\)"/\1/g'`
 
-PKG_NAME=valkey-ldap
+PKG_NAME=percona-valkey-ldap
 
 if [[ $VERSION = *-dev ]]; then
     if [ -z "$1" ]; then
@@ -35,7 +35,7 @@ cat packaging/valkey-ldap.spec.in | \
         > $TMPDIR/${PKG_NAME}.spec
 
 DATE=`LC_TIME=en_US.UTF-8 date "+%a %b %d %Y"`
-echo "* $DATE Ricardo Dias <ricardo.dias@percona.com> - ${RPM_VERSION}" >> $TMPDIR/${PKG_NAME}.spec
+echo "* $DATE Evgeniy Patlan <evgeniy.patlan@percona.com> - ${RPM_VERSION}" >> $TMPDIR/${PKG_NAME}.spec
 echo "- Update to upstream version ${VERSION}" >> $TMPDIR/${PKG_NAME}.spec
 
 cp -r src $SOURCEDIR

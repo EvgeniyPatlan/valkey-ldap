@@ -1,7 +1,7 @@
-Source: valkey-ldap
+Source: percona-valkey-ldap
 Section: database
 Priority: optional
-Maintainer: Valkey Contributors <valkey@lists.valkey.io>
+Maintainer: Evgeniy Patlan <evgeniy.patlan@percona.com>
 Build-Depends: debhelper-compat (= 13),
                libssl-dev,
                libldap-dev | libldap2-dev,
@@ -13,11 +13,18 @@ Standards-Version: 4.6.2
 Homepage: https://github.com/valkey-io/valkey-ldap
 Rules-Requires-Root: no
 
-Package: valkey-ldap
+Package: percona-valkey-ldap
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Recommends: valkey-server (>= 7.2) | valkey (>= 7.2)
-Description: LDAP authentication module for Valkey
+Recommends: percona-valkey-server (>= 7.2) | valkey-server (>= 7.2) | valkey (>= 7.2)
+Provides: valkey-ldap
+Conflicts: valkey-ldap
+Replaces: valkey-ldap
+Description: LDAP authentication module for Valkey (Percona build)
  An LDAP authentication module for Valkey that provides external
  authentication and authorization via LDAP directories. Supports
  TLS, connection pooling, and group-based access control.
+ .
+ This is the Percona-branded build, intended to pair with
+ percona-valkey-server. It is a drop-in replacement for the upstream
+ valkey-ldap package.

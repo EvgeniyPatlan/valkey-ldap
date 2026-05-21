@@ -6,7 +6,7 @@ done
 
 ./packaging/build_srpm.sh
 
-SRPM=`ls valkey-ldap-*.rpm`
+SRPM=`ls percona-valkey-ldap-*.rpm`
 
 TMPDIR=`mktemp -d`
 mv $SRPM $TMPDIR
