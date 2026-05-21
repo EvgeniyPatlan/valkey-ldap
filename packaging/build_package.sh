@@ -259,8 +259,13 @@ install_deps_rpm() {
         esac
 
         log_info "Installing RPM build dependencies..."
+        # Note: curl is intentionally omitted. EL9+ and Amazon Linux 2023 ship
+        # curl-minimal preinstalled (provides /usr/bin/curl), and dnf refuses
+        # to install curl alongside it without --allowerasing. The preinstalled
+        # curl-minimal is sufficient for install_rust_toolchain's rustup-init
+        # download. The upstream spec.in carries the same comment.
         $pkg_mgr install -y \
-            rpm-build rpmdevtools gcc gcc-c++ make git tar gzip wget curl ca-certificates \
+            rpm-build rpmdevtools gcc gcc-c++ make git tar gzip wget ca-certificates \
             openssl openssl-devel openldap-devel clang-devel pkg-config
 
         $pkg_mgr clean all
