@@ -284,36 +284,43 @@ install_deps_deb() {
 # Install rustup + the pinned toolchain into /usr/local so subsequent stages
 # in the same container (e.g. cargo vendor inside get_sources) can find it.
 install_rust_toolchain() {
-    if command -v cargo &>/dev/null; then
+    # Pin install location so subsequent stages (which run in a separate
+    # bash invocation but the same container) can find both the cargo
+    # binary and the toolchain. ensure_cargo_on_path uses the same values.
+    export CARGO_HOME=/usr/local/cargo
+    export RUSTUP_HOME=/usr/local/rustup
+    export PATH="$CARGO_HOME/bin:$PATH"
+
+    # Treat "rustup proxy with a working toolchain" as already installed;
+    # a bare `command -v cargo` check is not enough because the proxy
+    # exits non-zero when no default toolchain is configured.
+    if cargo --version &>/dev/null; then
         log_info "Rust already available: $(cargo --version)"
         return 0
     fi
 
     log_info "Installing Rust toolchain ${RUST_TOOLCHAIN}..."
-    export CARGO_HOME=/usr/local/cargo
-    export RUSTUP_HOME=/usr/local/rustup
     mkdir -p "$CARGO_HOME" "$RUSTUP_HOME"
-
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
         | sh -s -- --default-toolchain "${RUST_TOOLCHAIN}" --no-modify-path --profile minimal -y
 
-    # Make cargo/rustc visible in this process and to children.
-    export PATH="$CARGO_HOME/bin:$PATH"
     log_info "Rust installed: $(cargo --version)"
 }
 
-# Source the Rust env if cargo isn't on PATH (used by stages run separately
-# from install_deps within the same container).
+# Make sure cargo + the installed toolchain are usable in the current shell.
+# Must set RUSTUP_HOME explicitly — /usr/local/cargo/env only fixes PATH,
+# and without RUSTUP_HOME the rustup proxy looks under ~/.rustup (empty)
+# and bails with "no default is configured".
 ensure_cargo_on_path() {
-    if command -v cargo &>/dev/null; then return 0; fi
-    for env_file in /usr/local/cargo/env "$HOME/.cargo/env" /root/.cargo/env; do
-        if [[ -f "$env_file" ]]; then
-            # shellcheck disable=SC1090
-            . "$env_file"
-            break
-        fi
-    done
-    command -v cargo &>/dev/null || die "cargo not found — run --install_deps first"
+    export CARGO_HOME="${CARGO_HOME:-/usr/local/cargo}"
+    export RUSTUP_HOME="${RUSTUP_HOME:-/usr/local/rustup}"
+    if [[ -d "$CARGO_HOME/bin" ]]; then
+        case ":$PATH:" in
+            *":$CARGO_HOME/bin:"*) ;;
+            *) export PATH="$CARGO_HOME/bin:$PATH" ;;
+        esac
+    fi
+    cargo --version &>/dev/null || die "cargo not found / no default toolchain — run --install_deps first"
 }
 
 # ---------------------------------------------------------------------------
@@ -588,11 +595,8 @@ build_deb() {
     dch -m -D "$debian_codename" --force-distribution \
         -v "${VERSION}-${RELEASE}.${debian_codename}" 'Update distribution'
 
-    # Cargo needs PATH inside the dpkg-buildpackage child shell.
+    # Cargo needs PATH + RUSTUP_HOME inside the dpkg-buildpackage child shell.
     ensure_cargo_on_path
-    export CARGO_HOME=/usr/local/cargo
-    export RUSTUP_HOME=/usr/local/rustup
-    export PATH="$CARGO_HOME/bin:$PATH"
 
     # shellcheck disable=SC2046
     unset $(locale | cut -d= -f1) 2>/dev/null || true
