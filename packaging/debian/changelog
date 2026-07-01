@@ -1,4 +1,4 @@
-percona-valkey-ldap (1.1.0-1) unstable; urgency=medium
+percona-valkey-ldap (1.1.1-1) unstable; urgency=medium
 
   * Initial Percona-branded packaging of valkey-ldap based on upstream 1.1.0.
   * Source and binary package renamed to percona-valkey-ldap.
