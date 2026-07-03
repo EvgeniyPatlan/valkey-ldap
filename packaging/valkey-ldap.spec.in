@@ -162,8 +162,14 @@ cargo tree                                                          \
 %install
 install -pDm755 target/rpm/libvalkey_ldap.so -t %{buildroot}%{valkey_modules_dir}
 
+# Embedded SBOM set (SPDX/CycloneDX json+xml, Syft table, license manifest),
+# generated from the built tree by the shipped gen-module-sbom.sh. Syft is put on
+# PATH by build_package.sh --install_deps; the script fails loudly if missing.
+sh packaging/gen-module-sbom.sh %{name} %{version}-%{release} %{buildroot}%{_datadir}/%{name}/sbom .
+
 %files
 %{valkey_modules_dir}/libvalkey_ldap.so
+%{_datadir}/%{name}/
 %license LICENSE
 %license LICENSE.dependencies
 %doc README.md

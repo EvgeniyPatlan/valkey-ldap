@@ -1,1 +1,2 @@
 usr/lib/valkey/modules/libvalkey_ldap.so
+usr/share/percona-valkey-ldap/sbom/*
