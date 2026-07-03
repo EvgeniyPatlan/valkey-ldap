@@ -222,6 +222,20 @@ install_deps() {
     fi
 
     install_rust_toolchain
+    ensure_syft_system
+}
+
+# ensure_syft_system — install Syft into /usr/local/bin so the spec/rules can
+# generate the package's SBOM from the built tree. Idempotent; tries curl/wget.
+ensure_syft_system() {
+    command -v syft &>/dev/null && return 0
+    log_info "Installing Syft (system-wide) for in-package SBOM generation..."
+    if command -v curl &>/dev/null; then
+        curl -sSfL https://get.anchore.io/syft | sh -s -- -b /usr/local/bin >/dev/null 2>&1 || true
+    elif command -v wget &>/dev/null; then
+        wget -qO- https://get.anchore.io/syft | sh -s -- -b /usr/local/bin >/dev/null 2>&1 || true
+    fi
+    command -v syft &>/dev/null || log_warn "Syft not installed; the package SBOM step will fail loudly at build time"
 }
 
 install_deps_rpm() {

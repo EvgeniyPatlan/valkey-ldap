@@ -15,6 +15,11 @@ override_dh_auto_install:
 	install -d debian/tmp/usr/lib/valkey/modules
 	install -m 755 target/release/libvalkey_ldap.so \
 		debian/tmp/usr/lib/valkey/modules/
+	# Embedded SBOM set (SPDX/CycloneDX json+xml, Syft table, license manifest),
+	# generated from the built tree by the shipped gen-module-sbom.sh. Syft is on
+	# PATH via build_package.sh --install_deps; the script fails loudly if missing.
+	sh packaging/gen-module-sbom.sh percona-valkey-ldap $$(dpkg-parsechangelog -S Version 2>/dev/null || echo 0) \
+		debian/tmp/usr/share/percona-valkey-ldap/sbom .
 
 override_dh_auto_test:
 	# Tests require LDAP infrastructure — skip during package build
@@ -22,3 +27,8 @@ override_dh_auto_test:
 
 override_dh_shlibdeps:
 	dh_shlibdeps -l$(CURDIR)/target/release/
+
+# Build the .deb with xz (not the zstd default on Ubuntu jammy+/Debian bookworm+):
+# the Percona repo's reprepro can't read zstd-compressed control.tar/data.tar.
+override_dh_builddeb:
+	dh_builddeb -- -Zxz
