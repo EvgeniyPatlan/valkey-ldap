@@ -25,6 +25,12 @@ override_dh_auto_test:
 	# Tests require LDAP infrastructure — skip during package build
 	true
 
+override_dh_fixperms:
+	dh_fixperms
+	# Valkey refuses to load a module without the execute bit; dh_fixperms
+	# normalises the .so back to 0644, so restore 0755 here.
+	chmod 0755 debian/percona-valkey-ldap/usr/lib/valkey/modules/libvalkey_ldap.so
+
 override_dh_shlibdeps:
 	dh_shlibdeps -l$(CURDIR)/target/release/
 
