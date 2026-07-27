@@ -439,6 +439,7 @@ render_spec() {
         -e "s/#\[VERSION\]/${VERSION}/g" \
         -e "s/#\[PKG_NAME\]/${PACKAGE_NAME}/g" \
         "$spec_in" > "$out_spec"
+    sed -i "s/^Release:.*$/Release:        ${RELEASE}%{?dist}/" "$out_spec"
     local date
     date="$(LC_TIME=en_US.UTF-8 date "+%a %b %d %Y")"
     {
