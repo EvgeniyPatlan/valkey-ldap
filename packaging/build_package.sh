@@ -34,6 +34,44 @@ log_warn()  { printf '\033[1;33m[WARN]\033[0m  %s\n' "$*" >&2; }
 log_error() { printf '\033[1;31m[ERROR]\033[0m %s\n' "$*" >&2; }
 die()       { log_error "$@"; exit 1; }
 
+# ---------------------------------------------------------------------------
+# apt resilience — a transient mirror/CDN failure (e.g. "Connection reset by
+# peer" from deb.debian.org) must never fail a build. harden_apt drops in a
+# config with retries, generous timeouts and no HTTP pipelining (flaky Fastly
+# nodes reset pipelined connections). apt_get wraps the WHOLE command in an
+# outer retry loop: apt's own Acquire::Retries handles per-file blips, and when
+# those exhaust, the loop refreshes indexes and retries (a fresh attempt may
+# route to a healthy node; already-fetched .debs stay cached). Use apt_get for
+# every apt-get update/install.
+# ---------------------------------------------------------------------------
+harden_apt() {
+    [[ -d /etc/apt ]] || return 0
+    mkdir -p /etc/apt/apt.conf.d
+    cat > /etc/apt/apt.conf.d/80-retries <<'EOF'
+Acquire::Retries "5";
+Acquire::Retries::Delay "true";
+Acquire::http::Timeout "120";
+Acquire::https::Timeout "120";
+Acquire::http::Pipeline-Depth "0";
+EOF
+}
+
+apt_get() {
+    harden_apt
+    local attempt rc
+    for attempt in 1 2 3 4 5; do
+        if DEBIAN_FRONTEND=noninteractive command apt-get "$@"; then
+            return 0
+        fi
+        rc=$?
+        log_warn "apt-get $* failed (attempt ${attempt}/5, rc=${rc}); refreshing indexes before retry"
+        DEBIAN_FRONTEND=noninteractive command apt-get update -y >/dev/null 2>&1 || true
+        sleep $(( attempt * 10 ))
+    done
+    log_error "apt-get $* failed after 5 attempts"
+    return 1
+}
+
 cleanup() {
     local rc=$?
     if [[ $rc -ne 0 ]]; then
@@ -288,20 +326,16 @@ install_deps_rpm() {
 
 install_deps_deb() {
     log_info "Installing DEB build dependencies..."
-    # Acquire::Retries makes apt retry transient mirror failures (e.g. mid-
-    # download "Connection reset by peer") without aborting the whole stage.
-    # Fix-Missing tolerates a partial fetch and re-runs against any leftover.
-    local APT_OPTS=(-o Acquire::Retries=5)
-    apt-get "${APT_OPTS[@]}" update
+    apt_get update
 
-    DEBIAN_FRONTEND=noninteractive apt-get "${APT_OPTS[@]}" -y --fix-missing install \
+    apt_get -y --fix-missing install \
         build-essential debhelper devscripts dpkg-dev \
         fakeroot ca-certificates lsb-release \
         git wget curl tar gzip make gcc pkg-config \
         libssl-dev libclang-dev
 
-    DEBIAN_FRONTEND=noninteractive apt-get "${APT_OPTS[@]}" -y --fix-missing install libldap-dev \
-        || DEBIAN_FRONTEND=noninteractive apt-get "${APT_OPTS[@]}" -y --fix-missing install libldap2-dev
+    apt_get -y --fix-missing install libldap-dev \
+        || apt_get -y --fix-missing install libldap2-dev
 }
 
 # Install rustup + the pinned toolchain into /usr/local so subsequent stages
