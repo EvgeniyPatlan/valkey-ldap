@@ -90,12 +90,6 @@
   ],
   "deb": [
     {
-      "platform_id": "debian-11",
-      "codename": "bullseye",
-      "image": "debian:11",
-      "arch": ["amd64", "arm64"]
-    },
-    {
       "platform_id": "debian-12",
       "codename": "bookworm",
       "image": "debian:12",
