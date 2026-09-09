@@ -112,6 +112,12 @@
       "codename": "noble",
       "image": "ubuntu:24.04",
       "arch": ["amd64", "arm64"]
+    },
+    {
+      "platform_id": "ubuntu-26.04",
+      "codename": "resolute",
+      "image": "ubuntu:26.04",
+      "arch": ["amd64", "arm64"]
     }
   ]
 }
