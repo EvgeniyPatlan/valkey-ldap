@@ -588,14 +588,29 @@ build_rpm() {
 #   - Any other HTTP result: stop, so a network problem can't produce an orig
 #     that release refuses later.
 #
+#   Generated files (--generated, here vendor/ from cargo vendor) are left
+#   out of the comparison and come from the published orig. Each build
+#   regenerates them with the cargo it installs, so they can differ even when
+#   upstream did not change. The published ones are what the released
+#   packages were built with.
+#
+#   Only the source DEB uses this. RPMs keep the new tarball: no repo there
+#   refuses a different source for the same version.
+#
 #   Sets ORIG_SOURCE_OPTS (extra dpkg-buildpackage options).
 #
 #   Run from the directory that holds <name>_<ver>.orig.tar.gz and the tree:
-#     use_published_orig <source name> <upstream version> <tree> [own files]
+#     use_published_orig [--generated <path>]... <source name> <upstream version> <tree> [own files]
 #   Own files are names at the top of the tree.
 # ---------------------------------------------------------------------------
 ORIG_SOURCE_OPTS=""
 use_published_orig() {
+    local generated=()
+    while [[ "${1:-}" == "--generated" ]]; do
+        [[ -n "${2:-}" ]] || die "use_published_orig: --generated needs a path"
+        generated+=("$2")
+        shift 2
+    done
     local name="$1" ver="$2" tree="$3"
     shift 3
     local own=("$@")
@@ -643,7 +658,7 @@ use_published_orig() {
         || die "Cannot unpack the published ${orig}"
     tar xzf "$orig" -C "${check}/new" --strip-components=1 \
         || die "Cannot unpack the new ${orig}"
-    for f in debian "${own[@]}"; do
+    for f in debian "${own[@]}" "${generated[@]}"; do
         rm -rf "${check}/published/${f}" "${check}/new/${f}"
     done
     local changes
@@ -681,6 +696,9 @@ use_published_orig() {
     rm -rf "$check"
 
     log_info "Building ${name} ${ver} on the published ${orig} from ${repo}"
+    if [[ "${#generated[@]}" -gt 0 ]]; then
+        log_info "Generated files taken from the published orig: ${generated[*]}"
+    fi
     if [[ "${#own_changed[@]}" -gt 0 ]]; then
         log_info "Packaging files newer than the published orig, recorded as a patch: ${own_changed[*]}"
         # 3.0 (quilt) refuses unrecorded changes to upstream files unless told
@@ -729,7 +747,8 @@ build_source_deb() {
 
     # A rebuild of a released upstream version must reuse its published orig.
     # packaging/ is ours, not upstream code.
-    use_published_orig "$PACKAGE_NAME" "$VERSION" "$builddir" packaging
+    # vendor/ comes from cargo vendor in get_sources.
+    use_published_orig --generated vendor "$PACKAGE_NAME" "$VERSION" "$builddir" packaging
 
     cd "$builddir" || die "Cannot cd to $builddir"
 
